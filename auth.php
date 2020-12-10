@@ -83,8 +83,13 @@ class auth_plugin_saml2sso extends auth_plugin_base {
         $legacyComponentName = (array) get_config(self::LEGACY_COMPONENT_NAME);
         $this->config = (object) array_merge($this->defaults, $componentName, $legacyComponentName);
         if (empty($this->config->authsource)) {
-            // Uses old entityid key.
-            $this->config->authsource = $this->config->entityid;
+            // Check if entity id isset to avoid notices and show debugging message
+            if (isset($this->config->entityid)) {
+                // Uses old entityid key
+                $this->config->authsource = $this->config->entityid;
+            } else {
+                debugging('Entityid not set, might be caused by missing simpleSAMLphp.', DEBUG_DEVELOPER);
+            }
             debugging('authsource config key empty, using old entityid key', DEBUG_DEVELOPER);
         }
         $this->mapping = (object) self::$stringmapping;
@@ -115,9 +120,14 @@ class auth_plugin_saml2sso extends auth_plugin_base {
         } else {
             $button_path = new moodle_url('/auth/saml2sso/pix/login-btn.png');
         }
+
         $button_name = 'SAML Login';
         if (!empty(trim($this->config->button_name))) {
-                $button_name = (new moodle_url($this->config->button_name))->out();
+            $button_name = (new moodle_url($this->config->button_name))->out();
+        }
+
+        if ($this->config->show_button_name === '0') {
+            $button_name = '';
         }
 
         return [[
@@ -341,8 +351,18 @@ class auth_plugin_saml2sso extends auth_plugin_base {
                             ? core_text::strtoupper(trim(strstr($attributes[$this->config->field_idp_lastname][0], " ")))
                             : core_text::strtoupper(trim($attributes[$this->config->field_idp_lastname][0]));
         } else {
-            $attributes[$this->mapping->firstname][0] = trim($attributes[$this->config->field_idp_firstname][0]);
-            $attributes[$this->mapping->lastname][0] = trim($attributes[$this->config->field_idp_lastname][0]);
+
+            // Setting default to empty string to avoid notices being thrown
+            $attributes[$this->mapping->firstname][0] = '';
+            $attributes[$this->mapping->lastname][0] = '';
+
+            if (isset($attributes[$this->config->field_idp_firstname][0])) {
+                $attributes[$this->mapping->firstname][0] = trim($attributes[$this->config->field_idp_firstname][0]);
+            }
+
+            if (isset($attributes[$this->config->field_idp_lastname][0])) {
+                $attributes[$this->mapping->lastname][0] = trim($attributes[$this->config->field_idp_lastname][0]);
+            }
         }
 
         // User Id returned from IdP

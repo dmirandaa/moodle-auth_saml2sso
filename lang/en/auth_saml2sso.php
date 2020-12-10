@@ -29,6 +29,7 @@ $string['settings_saml2sso']                        = '';
 //label config strings
 $string['label_button_url']                         = 'Url to button (image)';
 $string['label_button_name']                        = 'Button caption';
+$string['label_show_button_name']                   = 'Show button caption';
 $string['label_sp_path']                            = 'SimpleSAMLphp library path';
 $string['label_dual_login']                         = 'Dual login';
 $string['label_single_signoff']                     = 'Single Sign Off';
@@ -50,6 +51,7 @@ $string['label_session_control']                    = 'Apply session limit';
 //_help config strings
 $string['help_allow_empty_email']                   = 'Allow the IdP/ADFS don\'t return Email or Mail value. User will be prompted to complete the profile.';
 $string['help_button_url']                          = 'Url to an image that will be used as login button. Max 50px high';
+$string['help_show_button_name']                    = 'Decide if the button caption should be displayed. A simple way to remove the text from the button';
 $string['help_button_name']                         = 'A caption for the login button';
 $string['help_sp_path']                             = 'Absolute path to Service Provider (SP) installation. Ex.: /var/www/simplesamlphp/';
 $string['help_dual_login']                          = 'Define if prompt the user with standard Moodle login page';

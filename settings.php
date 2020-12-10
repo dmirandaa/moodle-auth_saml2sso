@@ -183,6 +183,14 @@ if ($ADMIN->fulltree) {
         )
     );
 
+    $field_setting = 'show_button_name';
+    $settings->add(new admin_setting_configcheckbox(
+        'auth_saml2sso/'. $field_setting,
+        new lang_string('label_' . $field_setting, 'auth_saml2sso'),
+        new lang_string('help_' . $field_setting, 'auth_saml2sso'),
+        '1'
+    ));
+
     // User synchronization with external source
     $settings->add(new admin_setting_heading(auth_saml2sso\COMPONENT_NAME . '/sync_settings',
             new lang_string('label_sync_settings', auth_saml2sso\COMPONENT_NAME),

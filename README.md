@@ -34,6 +34,7 @@ The key for this plugin is that you can use your exists Service Provider (SP) wi
 * User synchronization source (see below)
 * Allow users to edit or not the profile
 * ~~Ability to break the full name from IdP into firstname and lastname~~ *deprecated, this is the last release supporting it: see below*
+* **new** Have an empty caption text for the button - To be able to use an image with text included instead.
 
 To override the authentication and login directly in Moodle (ex.: using admin account), add the `saml=off` parameter in the URL (ex.: https://my.moodle/login/index.php?saml=off)
 
