@@ -15,14 +15,17 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * auth_sync installer script.
+ * saml2sso installer script.
  *
  * @package auth_saml2sso
- * @copyright 2018 Marco Ferrante, University of Genoa (I) <marco@csita.unige.it>
+ * @copyright 2018-2024 Marco Ferrante, University of Genoa (I) <marco@csita.unige.it>
  * @license http://www.gnu.org/copyleft/gpl.html GNU Public License
  */
 
 function xmldb_auth_saml2sso_install() {
     global $CFG, $DB;
-
+    
+    if (!empty(getenv('SIMPLESAMLPHP_CONFIG_DIR'))) {
+        set_config('sp_path', dirname(getenv('SIMPLESAMLPHP_CONFIG_DIR')), 'auth_saml2sso');
+    }
 }

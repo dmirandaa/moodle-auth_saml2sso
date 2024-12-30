@@ -29,7 +29,7 @@ The key for this plugin is that you can leverage on your exists Service Provider
 * Username mapping - Which attribute from IdP should be used for username
 * Username checking - Where to check if the username exists
 * Auto create users - Allow create new users
-* **new** Force IdP re-authentication after Moodle logoout with "[Always request auth](#Always-request-auth)" options
+* **new** Force IdP re-authentication after Moodle logout with "[Always request auth](#Always-request-auth)" options
 * [Limit concurrent logins](#Limit-concurrent-logins) to 1 if configured as global setting
 * Dual login (Yes/No) - Can login with manual accounts like admin
 * User synchronization source (see below)
