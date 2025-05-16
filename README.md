@@ -10,6 +10,15 @@ You'll need the following pre-requirement:
 
 You are strongly encouraged to use a [SimpleSAMLphp session storage](https://simplesamlphp.org/docs/stable/simplesamlphp-maintenance#section_2) other than the default phpsession.
 
+## How to install
+
+You can install this plugin as usual from the Moodle plugins directory following the official instructions: https://docs.moodle.org/500/en/Installing_plugins#Installing_directly_from_the_Moodle_plugins_directory
+
+If you can't deploy the plugin code via the web interface, unzip the distribution package in *`/path/to/moodle`*`/auth/` and rename the folder `saml2sso` if required.
+Then complete the configuration from the Moodle UI *Administration > Plugins > Manage authentication*. 
+
+## Alternative plugins
+
 There are other SAML plugins for Moodle and the panorama could be confusing.
 Below are the main differences between this plugin, named internally as **auth_saml2sso**, and the others:
 
@@ -62,6 +71,10 @@ Probably this is due to the mismatch between the Moodle session and the local SS
 
 Instead, this plugin **supports the concurrent logins** limit if it is set to >= 1. It is possible because SimpleSAMLphp API can interact with the local SSO session.
 This is a common scenario for exams. However limits > 1 have not a clear purpose and only one session will be available to SSO accounts.
+The concurrent login limit doesn' apply to administrators.
+Beware the plugin doesn't prevent a second login when there is already a valid session for the user: instead it kills the first session and kick off the user.
+This is unavoidable, since the first session could be alive even when the opening browser crashed or is no longer running. Otherwise the user will be lock out until the Moodle session expires.
+If you want to force quiz access only to the first user session, you can use the https://moodle.org/plugins/quizaccess_onesession plugin.
 
 ## Always request auth
 With this option enabled, the SAML AuthnRequest always contains a [ForceAuthn](https://simplesamlphp.org/docs/stable/saml/sp.html) that asks to the IdP to re-authenticate the user even if a valid SSO session exists. 
