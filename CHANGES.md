@@ -1,3 +1,7 @@
+# Changes in 4.5.3
+
+- improved diagnotic and documentation
+
 # Changes in 4.5.2
 
 - autodetect of SSP path at install

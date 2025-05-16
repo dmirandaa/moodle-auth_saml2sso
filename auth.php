@@ -83,8 +83,11 @@ class auth_plugin_saml2sso extends auth_plugin_base {
      * @since 3.6.0 Dropped support for non namespaced functions
      */
     private function getsspauth() {
-        auth_saml2sso\load_ssp_lib($this->config->sp_path);
-
+        $found = auth_saml2sso\load_ssp_lib($this->config->sp_path);
+        if (!$found) {
+            throw new \Exception('SimpleSAMLphp libraries not found, check configuration');
+        }
+        
         return new \SimpleSAML\Auth\Simple($this->config->authsource);
     }
 
@@ -573,6 +576,7 @@ class auth_plugin_saml2sso extends auth_plugin_base {
      */
     public function test_settings() {
         global $OUTPUT;
+        $warning = false;
 
         // NOTE: this is not localised intentionally, admins are supposed to understand English at least a bit...
 
@@ -584,6 +588,7 @@ class auth_plugin_saml2sso extends auth_plugin_base {
             echo $OUTPUT->notification('SimpleSAMLphp lib path differs from the environment default ('
                     . dirname(getenv('SIMPLESAMLPHP_CONFIG_DIR'))
                     . '): it could be fine, but check if the library has been updated', \core\output\notification::NOTIFY_WARNING);
+            $warning = true;
         }
         if (!file_exists($this->config->sp_path . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . '_autoload.php')) {
             echo $OUTPUT->notification('SimpleSAMLphp version seems < 2.x or lib path is invalid', \core\output\notification::NOTIFY_ERROR);
@@ -599,10 +604,12 @@ class auth_plugin_saml2sso extends auth_plugin_base {
         if (version_compare($sspconfig->getVersion(), '2.0.0') < 0) {
             echo $OUTPUT->notification('SimpleSAMLphp lib version ('
                     . $sspconfig->getVersion() . ') is not supported, this plugin requires a 2.x release', \core\output\notification::NOTIFY_ERROR);
+            return;
         }
         elseif (version_compare($sspconfig->getVersion(), '2.3.4') < 0) {
             echo $OUTPUT->notification('SimpleSAMLphp lib seems too old ('
                     . $sspconfig->getVersion() . ') and insicure: you should upgrade it', \core\output\notification::NOTIFY_WARNING);
+            $warning = true;
         }
         else {
             echo $OUTPUT->notification('SimpleSAMLphp version is ' . $sspconfig->getVersion(), \core\output\notification::NOTIFY_INFO);
@@ -610,7 +617,9 @@ class auth_plugin_saml2sso extends auth_plugin_base {
 
         @include($this->config->sp_path . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'config.php');
         if ($config['store.type'] == 'phpsession') {
-            echo $OUTPUT->notification('It seems SimpleSAMLphp uses default PHP session storage, it could be troublesome: switch to another store.type in config.php', \core\output\notification::NOTIFY_WARNING);
+            echo $OUTPUT->notification('It seems SimpleSAMLphp uses default PHP session storage, it could be troublesome: switch to another store.type in config.php',
+                    \core\output\notification::NOTIFY_WARNING);
+            $warning = true;
         }
 
         $sourcesnames = array_map(function($source){
@@ -619,13 +628,14 @@ class auth_plugin_saml2sso extends auth_plugin_base {
         if (empty($this->config->authsource) || !in_array($this->config->authsource, $sourcesnames)) {
             echo $OUTPUT->notification('Invalid authentication source. Available sources: '
                     . implode(', ', $sourcesnames), \core\output\notification::NOTIFY_WARNING);
-            return;
+            $warning = true;
         }
-
-        $auth = $this->getsspauth();
-        if (empty($auth)) {
-            echo $OUTPUT->notification('SimpleSAMLphp library loading failed!', \core\output\notification::NOTIFY_WARNING);
-            return;
+        else {
+            $auth = $this->getsspauth();
+            if (empty($auth)) {
+                echo $OUTPUT->notification('SimpleSAMLphp library loading failed!', \core\output\notification::NOTIFY_ERROR);
+                return;
+            }
         }
         
         if (!empty($this->config->logout_url_redir)) {
@@ -634,12 +644,14 @@ class auth_plugin_saml2sso extends auth_plugin_base {
             }
             catch (\Exception $e) {
                 echo $OUTPUT->notification($this->config->logout_url_redir . ' is not allowed as redirect URL, check SSP config.', \core\output\notification::NOTIFY_WARNING);
+                $warning = true;
             }
         }
 
         if (empty($this->config->idpattr)) {
             echo $OUTPUT->notification('The attribute from the IdP to use as Moodle Username is not set',
                     \core\output\notification::NOTIFY_WARNING);
+            $warning = true;
         }
         else {
             $attrmap = $this->get_attribute_mapping($this->config->idpattr);
@@ -647,6 +659,7 @@ class auth_plugin_saml2sso extends auth_plugin_base {
                 echo $OUTPUT->notification('The user will be search by ' . $this->config->moodle_mapping
                         . ' but no attribute from the IdP is map to this field',
                         \core\output\notification::NOTIFY_WARNING);
+                $warning = true;
             }
         }
 
@@ -655,6 +668,7 @@ class auth_plugin_saml2sso extends auth_plugin_base {
             if (!$plugin) {
                 echo $OUTPUT->notification('Invalid directory plugin \''
                         . $this->config->user_directory . '\'', \core\output\notification::NOTIFY_WARNING);
+                $warning = true;
             }
             if (method_exists($plugin, 'test_settings')) {
                 $options[$this->config->user_directory] = get_string('pluginname', 'auth_'.$this->config->user_directory);
@@ -662,7 +676,6 @@ class auth_plugin_saml2sso extends auth_plugin_base {
                 echo $OUTPUT->notification('A sync process with \'' . get_string('pluginname', 'auth_'.$this->config->user_directory)
                         . '\' auth plugin is enabled. <a href="' . $url
                         . '">Check its configuration</a>.', \core\output\notification::NOTIFY_INFO);
-
             }
             else {
                 echo $OUTPUT->notification('A sync process with \'' . get_string('pluginname', 'auth_'.$this->config->user_directory)
@@ -675,9 +688,15 @@ class auth_plugin_saml2sso extends auth_plugin_base {
                     . 'e-mail address, but the user is not enabled to edit '
                     . 'his profile to add it by himself. Users without e-mail will be locked out by Moodle.',
                     \core\output\notification::NOTIFY_WARNING);
+            $warning = true;
         }
 
-        echo $OUTPUT->notification('Everything seems ok', \core\output\notification::NOTIFY_SUCCESS);
+        if ($warning) {
+            echo $OUTPUT->notification('You have some minor issue, authentication will still work', \core\output\notification::NOTIFY_WARNING);
+        }
+        else {
+            echo $OUTPUT->notification('Everything seems ok', \core\output\notification::NOTIFY_SUCCESS);
+        }
     }
 
 }
