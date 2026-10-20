@@ -234,7 +234,7 @@ if ($ADMIN->fulltree) {
     }
 
     // The user source plugin, must be a "directory style" auth source.
-    $authsavailable = core_component::get_plugin_list('auth');
+    $authsavailable = \core\component::get_plugin_list('auth');
     $cansyncauthplugins = array();
     foreach ($authsavailable as $auth => $dir) {
         $authplugin = get_auth_plugin($auth);

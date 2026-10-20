@@ -67,7 +67,7 @@ function can_sync_user($plugin) {
 function get_known_plugin($knownauthplugins = LOCAL_AUTH_PLUGINS) {
     global $DB;
 
-    $authsavailable = \core_component::get_plugin_list('auth');
+    $authsavailable = \core\component::get_plugin_list('auth');
 
     $fields = [];
 
