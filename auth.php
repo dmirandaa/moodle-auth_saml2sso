@@ -387,7 +387,17 @@ class auth_plugin_saml2sso extends auth_plugin_base {
             'auth' => $this->authtype,
             $this->config->moodle_mapping => $userinfo[$this->config->moodle_mapping]
         ];
-        $isuser = $DB->get_record('user', $criteria);
+        $matchingusers = $DB->get_records('user', $criteria, 'id ASC', '*', 0, 2);
+        if (count($matchingusers) > 1) {
+            $event = \auth_saml2sso\event\duplicate_user::event_duplicate_user(
+                    $this->config->moodle_mapping,
+                    s($userinfo[$this->config->moodle_mapping]),
+                    $this->authtype
+            );
+            $event->trigger();
+            $this->error_page(get_string('duplicateuser', self::COMPONENT_NAME));
+        }
+        $isuser = reset($matchingusers);
         
         if (!empty($isuser)) {
             core_user::require_active_user($isuser, true, true);
@@ -399,7 +409,8 @@ class auth_plugin_saml2sso extends auth_plugin_base {
                 $criteria = [
                     $this->config->moodle_mapping => $userinfo[$this->config->moodle_mapping]
                 ];
-                $exists = $DB->get_record('user', $criteria);
+                $existingusers = $DB->get_records('user', $criteria, 'id ASC', '*', 0, 2);
+                $exists = reset($existingusers);
                 if ($exists) {
                     // Log the event only if dual login is disable; if enable could be a wrong action by the user.
                     if (!$this->config->dual_login) {
