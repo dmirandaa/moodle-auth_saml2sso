@@ -71,7 +71,9 @@ Probably this is due to the mismatch between the Moodle session and the local SS
 
 Instead, this plugin **supports the concurrent logins** limit if it is set to >= 1. It is possible because SimpleSAMLphp API can interact with the local SSO session.
 This is a common scenario for exams. However limits > 1 have not a clear purpose and only one session will be available to SSO accounts.
+
 The concurrent login limit doesn' apply to administrators.
+
 Beware the plugin doesn't prevent a second login when there is already a valid session for the user: instead it kills the first session and kick off the user.
 This is unavoidable, since the first session could be alive even when the opening browser crashed or is no longer running. Otherwise the user will be lock out until the Moodle session expires.
 If you want to force quiz access only to the first user session, you can use the https://moodle.org/plugins/quizaccess_onesession plugin.

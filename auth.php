@@ -290,6 +290,20 @@ class auth_plugin_saml2sso extends auth_plugin_base {
     }
 
     /**
+     * Check whether concurrent session control applies to a user.
+     *
+     * @param int $userid Moodle user ID.
+     * @return bool
+     */
+    private function apply_session_control($userid) {
+        global $CFG;
+
+        return !is_siteadmin($userid)
+                && !empty($this->config->session_control)
+                && $CFG->limitconcurrentlogins >= 1;
+    }
+
+    /**
      * Do all the magic during SSO login procedure
      * @global type $DB
      * @global type $USER
@@ -304,11 +318,7 @@ class auth_plugin_saml2sso extends auth_plugin_base {
             $param['ForceAuthn'] = true;
         }
 
-        // Admins can have multiple sessions.
-        $apply_session_control = !is_siteadmin($USER->id)
-                && $this->config->session_control
-                && $CFG->limitconcurrentlogins >= 1;
-        if ($apply_session_control) {
+        if ($this->apply_session_control($USER->id)) {
             // Force a reauthentication even if a SSO session is active in the SP.
             // Throw away the POST values because after reauthentication user must
             // fill the form again: session control is used in exams or similar
@@ -323,7 +333,7 @@ class auth_plugin_saml2sso extends auth_plugin_base {
 
         // Moodle session changed within the same local SSO session.
         if (!empty($prevmoodlesession) && $prevmoodlesession != session_id()) {
-            if ($apply_session_control) {
+            if ($this->apply_session_control($USER->id)) {
                 $event = \auth_saml2sso\event\user_kicked_off::create();
                 $event->trigger();
             }
@@ -428,10 +438,7 @@ class auth_plugin_saml2sso extends auth_plugin_base {
         $USER->site = $CFG->wwwroot;
         set_moodle_cookie($USER->username);
 
-        $apply_session_control = !is_siteadmin($USER->id)
-                && $this->config->session_control
-                && $CFG->limitconcurrentlogins == 1;
-        if ($apply_session_control) {
+        if ($this->apply_session_control($USER->id)) {
             // https://tracker.moodle.org/browse/MDL-62753?jql=text%20~%20%22session%20kill%22
             // moodle\auth\shibboleth\classes\helper.php
 
