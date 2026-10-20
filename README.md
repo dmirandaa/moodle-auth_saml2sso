@@ -38,14 +38,20 @@ The key for this plugin is that you can leverage on your exists Service Provider
 * Username mapping - Which attribute from IdP should be used for username
 * Username checking - Where to check if the username exists
 * Auto create users - Allow create new users
-* **new** Force IdP re-authentication after Moodle logout with "[Always request auth](#Always-request-auth)" options
+* Force IdP re-authentication after Moodle logout with "[Always request auth](#Always-request-auth)" options
 * [Limit concurrent logins](#Limit-concurrent-logins) to 1 if configured as global setting
 * Dual login (Yes/No) - Can login with manual accounts like admin
 * User synchronization source (see below)
 * Allow users to edit or not the profile
 * Have an empty caption text for the button - To be able to use an image with text included instead.
 
-To override the authentication and login directly in Moodle (ex.: using admin account), add the `saml=off` parameter in the URL (ex.: https://my.moodle/login/index.php?saml=off)
+To bypass automatic SAML authentication and log in directly to Moodle (for example, with a manual administrator account), add the `saml=off` parameter to the URL (for example: https://my.moodle/login/index.php?saml=off).
+
+Starting with Moodle 4.5, administrators can disable the manual login form in **Site administration > Plugins > Authentication > Manage authentication**. The `saml=off` parameter only prevents the automatic SAML redirect; it cannot display a manual login form that Moodle has disabled. Before disabling the form, make sure administrators have another authentication method or command-line access. The manual form can be restored from the command line with:
+
+```shell
+php admin/cli/cfg.php --name=showloginform --set=1
+```
 
 ## Upgrade to 3.10
 

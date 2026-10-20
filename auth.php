@@ -633,7 +633,7 @@ class auth_plugin_saml2sso extends auth_plugin_base {
                     . $sspconfig->getVersion() . ') is not supported, this plugin requires a 2.x release', \core\output\notification::NOTIFY_ERROR);
             return;
         }
-        elseif (version_compare($sspconfig->getVersion(), '2.3.4') < 0) {
+        elseif (version_compare($sspconfig->getVersion(), '2.4.9') < 0) {
             echo $OUTPUT->notification('SimpleSAMLphp lib seems too old ('
                     . $sspconfig->getVersion() . ') and insicure: you should upgrade it', \core\output\notification::NOTIFY_WARNING);
             $warning = true;
@@ -690,6 +690,25 @@ class auth_plugin_saml2sso extends auth_plugin_base {
             }
         }
 
+        if (!$this->config->edit_profile && $this->config->allow_empty_email) {
+            echo $OUTPUT->notification('The plugin accepts SAML assertion with empty '
+                    . 'e-mail address, but the user is not enabled to edit '
+                    . 'his profile to add it by himself. Users without e-mail will be locked out by Moodle.',
+                    \core\output\notification::NOTIFY_WARNING);
+            $warning = true;
+        }
+
+        // This setting was introduced in Moodle 4.5. A missing value means that the login form is displayed.
+        $showloginform = get_config('core', 'showloginform');
+        if ($showloginform !== false && empty($showloginform)) {
+            echo $OUTPUT->notification('Moodle\'s manual login form is disabled. The saml=off parameter '
+                    . 'prevents automatic SAML authentication, but it cannot display the manual login form. '
+                    . 'Ensure administrators have another authentication method or command-line access. '
+                    . 'The form can be restored with: php admin/cli/cfg.php --name=showloginform --set=1',
+                    \core\output\notification::NOTIFY_WARNING);
+            $warning = true;
+        }
+
         if (!empty($this->config->user_directory)) {
             $plugin = get_auth_plugin($this->config->user_directory);
             if (!$plugin) {
@@ -708,14 +727,6 @@ class auth_plugin_saml2sso extends auth_plugin_base {
                 echo $OUTPUT->notification('A sync process with \'' . get_string('pluginname', 'auth_'.$this->config->user_directory)
                         . '\' auth plugin is enabled. Please check its configuration too.', \core\output\notification::NOTIFY_INFO);
             }
-        }
-
-        if (!$this->config->edit_profile && $this->config->allow_empty_email) {
-            echo $OUTPUT->notification('The plugin accepts SAML assertion with empty '
-                    . 'e-mail address, but the user is not enabled to edit '
-                    . 'his profile to add it by himself. Users without e-mail will be locked out by Moodle.',
-                    \core\output\notification::NOTIFY_WARNING);
-            $warning = true;
         }
 
         if ($warning) {

@@ -80,6 +80,7 @@ $string['label_dual_login_help']   = '
 By default Dual login is setted to No and users are redirect to the IdP or discovery service
 configured in the SimpleSAMLphp authentication source.<br />
 To perform Moodle standard login, add saml=off parameter. Ex.: /login/index.php?saml=off<br />
+In Moodle 4.5 and later, saml=off cannot display the manual login form if it has been disabled in Manage authentication.<br />
 Enabling Dual login users have to choose the authentication method.';
 $string['label_sync_settings']        = 'Users sync';
 $string['label_sync_settings_help']   = '
