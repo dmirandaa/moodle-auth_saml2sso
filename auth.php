@@ -46,11 +46,19 @@ class auth_plugin_saml2sso extends auth_plugin_base {
         'sp_path' => '',
         'dual_login' => 1,
         'single_signoff' => 1,
+        'button_url' => '',
+        'button_name' => '',
+        'show_button_name' => '1',
         'idpattr' => '',
         'moodle_mapping' => 'username',
         'autocreate' => 0,
+        'force_authn' => 0,
+        'session_control' => 0,
         'authsource' => '',
         'logout_url_redir' => '',
+        'user_directory' => '',
+        'do_update' => 0,
+        'verbose_sync' => 0,
         'edit_profile' => 0,
         'allow_empty_email' => 0,
         'delete_if_empty' => false,  // Delete the profile field value if the correspondig attribute is missing/empty.
@@ -98,6 +106,7 @@ class auth_plugin_saml2sso extends auth_plugin_base {
      * Added by Praxis
      */
     public function loginpage_idp_list($wantsurl) {
+        // Moodle preserves $wantsurl in the session; core_login_get_return_url() retrieves it after SAML authentication.
         $url = '/login/?saml=on';
 
         if (!empty($this->config->button_url)) {
@@ -108,7 +117,7 @@ class auth_plugin_saml2sso extends auth_plugin_base {
 
         $button_name = 'SAML Login';
         if (!empty(trim($this->config->button_name))) {
-            $button_name = (new moodle_url($this->config->button_name))->out();
+            $button_name = $this->config->button_name;
         }
 
         if ($this->config->show_button_name === '0') {
