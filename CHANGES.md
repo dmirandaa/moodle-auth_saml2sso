@@ -1,3 +1,11 @@
+# Changes in 4.5.15
+
+- bump to Moodle 4.5 compatibility
+- drop support for Moodle < 4.5
+- disabled the manual login form diagnostic and help
+- recommended SimpleSAMLphp version bumped to 2.4.9
+- several fixes
+
 # Changes in 4.5.3
 
 - improved diagnotic and documentation

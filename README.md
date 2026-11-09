@@ -38,14 +38,20 @@ The key for this plugin is that you can leverage on your exists Service Provider
 * Username mapping - Which attribute from IdP should be used for username
 * Username checking - Where to check if the username exists
 * Auto create users - Allow create new users
-* **new** Force IdP re-authentication after Moodle logout with "[Always request auth](#Always-request-auth)" options
+* Force IdP re-authentication after Moodle logout with "[Always request auth](#Always-request-auth)" options
 * [Limit concurrent logins](#Limit-concurrent-logins) to 1 if configured as global setting
 * Dual login (Yes/No) - Can login with manual accounts like admin
 * User synchronization source (see below)
 * Allow users to edit or not the profile
 * Have an empty caption text for the button - To be able to use an image with text included instead.
 
-To override the authentication and login directly in Moodle (ex.: using admin account), add the `saml=off` parameter in the URL (ex.: https://my.moodle/login/index.php?saml=off)
+To bypass automatic SAML authentication and log in directly to Moodle (for example, with a manual administrator account), add the `saml=off` parameter to the URL (for example: https://my.moodle/login/index.php?saml=off).
+
+Starting with Moodle 4.5, administrators can disable the manual login form in **Site administration > Plugins > Authentication > Manage authentication**. The `saml=off` parameter only prevents the automatic SAML redirect; it cannot display a manual login form that Moodle has disabled. Before disabling the form, make sure administrators have another authentication method or command-line access. The manual form can be restored from the command line with:
+
+```shell
+php admin/cli/cfg.php --name=showloginform --set=1
+```
 
 ## Upgrade to 3.10
 
@@ -71,7 +77,9 @@ Probably this is due to the mismatch between the Moodle session and the local SS
 
 Instead, this plugin **supports the concurrent logins** limit if it is set to >= 1. It is possible because SimpleSAMLphp API can interact with the local SSO session.
 This is a common scenario for exams. However limits > 1 have not a clear purpose and only one session will be available to SSO accounts.
+
 The concurrent login limit doesn' apply to administrators.
+
 Beware the plugin doesn't prevent a second login when there is already a valid session for the user: instead it kills the first session and kick off the user.
 This is unavoidable, since the first session could be alive even when the opening browser crashed or is no longer running. Otherwise the user will be lock out until the Moodle session expires.
 If you want to force quiz access only to the first user session, you can use the https://moodle.org/plugins/quizaccess_onesession plugin.

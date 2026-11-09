@@ -46,11 +46,19 @@ class auth_plugin_saml2sso extends auth_plugin_base {
         'sp_path' => '',
         'dual_login' => 1,
         'single_signoff' => 1,
+        'button_url' => '',
+        'button_name' => '',
+        'show_button_name' => '1',
         'idpattr' => '',
         'moodle_mapping' => 'username',
         'autocreate' => 0,
+        'force_authn' => 0,
+        'session_control' => 0,
         'authsource' => '',
         'logout_url_redir' => '',
+        'user_directory' => '',
+        'do_update' => 0,
+        'verbose_sync' => 0,
         'edit_profile' => 0,
         'allow_empty_email' => 0,
         'delete_if_empty' => false,  // Delete the profile field value if the correspondig attribute is missing/empty.
@@ -98,6 +106,7 @@ class auth_plugin_saml2sso extends auth_plugin_base {
      * Added by Praxis
      */
     public function loginpage_idp_list($wantsurl) {
+        // Moodle preserves $wantsurl in the session; core_login_get_return_url() retrieves it after SAML authentication.
         $url = '/login/?saml=on';
 
         if (!empty($this->config->button_url)) {
@@ -108,7 +117,7 @@ class auth_plugin_saml2sso extends auth_plugin_base {
 
         $button_name = 'SAML Login';
         if (!empty(trim($this->config->button_name))) {
-            $button_name = (new moodle_url($this->config->button_name))->out();
+            $button_name = $this->config->button_name;
         }
 
         if ($this->config->show_button_name === '0') {
@@ -290,6 +299,20 @@ class auth_plugin_saml2sso extends auth_plugin_base {
     }
 
     /**
+     * Check whether concurrent session control applies to a user.
+     *
+     * @param int $userid Moodle user ID.
+     * @return bool
+     */
+    private function apply_session_control($userid) {
+        global $CFG;
+
+        return !is_siteadmin($userid)
+                && !empty($this->config->session_control)
+                && $CFG->limitconcurrentlogins >= 1;
+    }
+
+    /**
      * Do all the magic during SSO login procedure
      * @global type $DB
      * @global type $USER
@@ -304,11 +327,7 @@ class auth_plugin_saml2sso extends auth_plugin_base {
             $param['ForceAuthn'] = true;
         }
 
-        // Admins can have multiple sessions.
-        $apply_session_control = !is_siteadmin($USER->id)
-                && $this->config->session_control
-                && $CFG->limitconcurrentlogins >= 1;
-        if ($apply_session_control) {
+        if ($this->apply_session_control($USER->id)) {
             // Force a reauthentication even if a SSO session is active in the SP.
             // Throw away the POST values because after reauthentication user must
             // fill the form again: session control is used in exams or similar
@@ -323,7 +342,7 @@ class auth_plugin_saml2sso extends auth_plugin_base {
 
         // Moodle session changed within the same local SSO session.
         if (!empty($prevmoodlesession) && $prevmoodlesession != session_id()) {
-            if ($apply_session_control) {
+            if ($this->apply_session_control($USER->id)) {
                 $event = \auth_saml2sso\event\user_kicked_off::create();
                 $event->trigger();
             }
@@ -368,7 +387,17 @@ class auth_plugin_saml2sso extends auth_plugin_base {
             'auth' => $this->authtype,
             $this->config->moodle_mapping => $userinfo[$this->config->moodle_mapping]
         ];
-        $isuser = $DB->get_record('user', $criteria);
+        $matchingusers = $DB->get_records('user', $criteria, 'id ASC', '*', 0, 2);
+        if (count($matchingusers) > 1) {
+            $event = \auth_saml2sso\event\duplicate_user::event_duplicate_user(
+                    $this->config->moodle_mapping,
+                    s($userinfo[$this->config->moodle_mapping]),
+                    $this->authtype
+            );
+            $event->trigger();
+            $this->error_page(get_string('duplicateuser', self::COMPONENT_NAME));
+        }
+        $isuser = reset($matchingusers);
         
         if (!empty($isuser)) {
             core_user::require_active_user($isuser, true, true);
@@ -380,7 +409,8 @@ class auth_plugin_saml2sso extends auth_plugin_base {
                 $criteria = [
                     $this->config->moodle_mapping => $userinfo[$this->config->moodle_mapping]
                 ];
-                $exists = $DB->get_record('user', $criteria);
+                $existingusers = $DB->get_records('user', $criteria, 'id ASC', '*', 0, 2);
+                $exists = reset($existingusers);
                 if ($exists) {
                     // Log the event only if dual login is disable; if enable could be a wrong action by the user.
                     if (!$this->config->dual_login) {
@@ -428,10 +458,7 @@ class auth_plugin_saml2sso extends auth_plugin_base {
         $USER->site = $CFG->wwwroot;
         set_moodle_cookie($USER->username);
 
-        $apply_session_control = !is_siteadmin($USER->id)
-                && $this->config->session_control
-                && $CFG->limitconcurrentlogins == 1;
-        if ($apply_session_control) {
+        if ($this->apply_session_control($USER->id)) {
             // https://tracker.moodle.org/browse/MDL-62753?jql=text%20~%20%22session%20kill%22
             // moodle\auth\shibboleth\classes\helper.php
 
@@ -606,7 +633,7 @@ class auth_plugin_saml2sso extends auth_plugin_base {
                     . $sspconfig->getVersion() . ') is not supported, this plugin requires a 2.x release', \core\output\notification::NOTIFY_ERROR);
             return;
         }
-        elseif (version_compare($sspconfig->getVersion(), '2.3.4') < 0) {
+        elseif (version_compare($sspconfig->getVersion(), '2.4.9') < 0) {
             echo $OUTPUT->notification('SimpleSAMLphp lib seems too old ('
                     . $sspconfig->getVersion() . ') and insicure: you should upgrade it', \core\output\notification::NOTIFY_WARNING);
             $warning = true;
@@ -663,6 +690,25 @@ class auth_plugin_saml2sso extends auth_plugin_base {
             }
         }
 
+        if (!$this->config->edit_profile && $this->config->allow_empty_email) {
+            echo $OUTPUT->notification('The plugin accepts SAML assertion with empty '
+                    . 'e-mail address, but the user is not enabled to edit '
+                    . 'his profile to add it by himself. Users without e-mail will be locked out by Moodle.',
+                    \core\output\notification::NOTIFY_WARNING);
+            $warning = true;
+        }
+
+        // This setting was introduced in Moodle 4.5. A missing value means that the login form is displayed.
+        $showloginform = get_config('core', 'showloginform');
+        if ($showloginform !== false && empty($showloginform)) {
+            echo $OUTPUT->notification('Moodle\'s manual login form is disabled. The saml=off parameter '
+                    . 'prevents automatic SAML authentication, but it cannot display the manual login form. '
+                    . 'Ensure administrators have another authentication method or command-line access. '
+                    . 'The form can be restored with: php admin/cli/cfg.php --name=showloginform --set=1',
+                    \core\output\notification::NOTIFY_WARNING);
+            $warning = true;
+        }
+
         if (!empty($this->config->user_directory)) {
             $plugin = get_auth_plugin($this->config->user_directory);
             if (!$plugin) {
@@ -681,14 +727,6 @@ class auth_plugin_saml2sso extends auth_plugin_base {
                 echo $OUTPUT->notification('A sync process with \'' . get_string('pluginname', 'auth_'.$this->config->user_directory)
                         . '\' auth plugin is enabled. Please check its configuration too.', \core\output\notification::NOTIFY_INFO);
             }
-        }
-
-        if (!$this->config->edit_profile && $this->config->allow_empty_email) {
-            echo $OUTPUT->notification('The plugin accepts SAML assertion with empty '
-                    . 'e-mail address, but the user is not enabled to edit '
-                    . 'his profile to add it by himself. Users without e-mail will be locked out by Moodle.',
-                    \core\output\notification::NOTIFY_WARNING);
-            $warning = true;
         }
 
         if ($warning) {

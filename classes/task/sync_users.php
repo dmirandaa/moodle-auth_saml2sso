@@ -49,7 +49,7 @@ class sync_users extends \core\task\scheduled_task {
 
         $sync = get_auth_plugin(\auth_saml2sso\AUTH_NAME);
         $config = get_config(\auth_saml2sso\COMPONENT_NAME);
-        if ($config->verbose_sync) {
+        if (!empty($config->verbose_sync)) {
             $trace = new \text_progress_trace();
         }
         else {
